@@ -332,12 +332,20 @@ class Song {
   String? previewUrl;
   bool isSolved;
 
+  // Metadata for hints
+  final int? year;
+  final String? theme;
+  final bool? isBand;
+
   Song({
     required this.title,
     required this.artist,
     required this.language,
     this.previewUrl,
     this.isSolved = false,
+    this.year,
+    this.theme,
+    this.isBand,
   });
 }
 
@@ -545,26 +553,26 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       index: 1,
       title: 'שלב לאה - שירי קאלט משנות ה-70 וה-80',
       songs: [
-        Song(title: 'Bohemian Rhapsody', artist: 'Queen', language: Language.english),
-        Song(title: 'Hotel California', artist: 'Eagles', language: Language.english),
-        Song(title: 'Stairway to Heaven', artist: 'Led Zeppelin', language: Language.english),
-        Song(title: 'Imagine', artist: 'John Lennon', language: Language.english),
-        Song(title: 'Don\'t Stop Believin\'', artist: 'Journey', language: Language.english),
-        Song(title: 'Sweet Child O\' Mine', artist: 'Guns N\' Roses', language: Language.english),
-        Song(title: 'Billie Jean', artist: 'Michael Jackson', language: Language.english),
-        Song(title: 'Stayin\' Alive', artist: 'Bee Gees', language: Language.english),
-        Song(title: 'I Will Survive', artist: 'Gloria Gaynor', language: Language.english),
-        Song(title: 'Africa', artist: 'Toto', language: Language.english),
-        Song(title: 'Livin\' on a Prayer', artist: 'Bon Jovi', language: Language.english),
-        Song(title: 'Sweet Dreams', artist: 'Eurythmics', language: Language.english),
-        Song(title: 'Take On Me', artist: 'a-ha', language: Language.english),
-        Song(title: 'Every Breath You Take', artist: 'The Police', language: Language.english),
-        Song(title: 'With or Without You', artist: 'U2', language: Language.english),
-        Song(title: 'Careless Whisper', artist: 'George Michael', language: Language.english),
-        Song(title: 'Beat It', artist: 'Michael Jackson', language: Language.english),
-        Song(title: 'Purple Rain', artist: 'Prince', language: Language.english),
-        Song(title: 'Eye of the Tiger', artist: 'Survivor', language: Language.english),
-        Song(title: 'Girls Just Want to Have Fun', artist: 'Cyndi Lauper', language: Language.english),
+        Song(title: 'Bohemian Rhapsody', artist: 'Queen', language: Language.english, year: 1975, theme: 'חיים ומוות', isBand: true),
+        Song(title: 'Hotel California', artist: 'Eagles', language: Language.english, year: 1976, theme: 'מלון מסתורי', isBand: true),
+        Song(title: 'Stairway to Heaven', artist: 'Led Zeppelin', language: Language.english, year: 1971, theme: 'רוחניות ושאיפה', isBand: true),
+        Song(title: 'Imagine', artist: 'John Lennon', language: Language.english, year: 1971, theme: 'שלום עולמי', isBand: false),
+        Song(title: 'Don\'t Stop Believin\'', artist: 'Journey', language: Language.english, year: 1981, theme: 'תקווה וחלומות', isBand: true),
+        Song(title: 'Sweet Child O\' Mine', artist: 'Guns N\' Roses', language: Language.english, year: 1987, theme: 'אהבה', isBand: true),
+        Song(title: 'Billie Jean', artist: 'Michael Jackson', language: Language.english, year: 1982, theme: 'אהבה ובגידה', isBand: false),
+        Song(title: 'Stayin\' Alive', artist: 'Bee Gees', language: Language.english, year: 1977, theme: 'שרידות והישארות', isBand: true),
+        Song(title: 'I Will Survive', artist: 'Gloria Gaynor', language: Language.english, year: 1978, theme: 'כוח והתגברות', isBand: false),
+        Song(title: 'Africa', artist: 'Toto', language: Language.english, year: 1982, theme: 'געגועים ואהבה', isBand: true),
+        Song(title: 'Livin\' on a Prayer', artist: 'Bon Jovi', language: Language.english, year: 1986, theme: 'אהבה ומאבק', isBand: true),
+        Song(title: 'Sweet Dreams', artist: 'Eurythmics', language: Language.english, year: 1983, theme: 'שאיפות ורצונות', isBand: true),
+        Song(title: 'Take On Me', artist: 'a-ha', language: Language.english, year: 1985, theme: 'אהבה רומנטית', isBand: true),
+        Song(title: 'Every Breath You Take', artist: 'The Police', language: Language.english, year: 1983, theme: 'אובססיה ואהבה', isBand: true),
+        Song(title: 'With or Without You', artist: 'U2', language: Language.english, year: 1987, theme: 'אהבה מסובכת', isBand: true),
+        Song(title: 'Careless Whisper', artist: 'George Michael', language: Language.english, year: 1984, theme: 'חרטה ואובדן', isBand: false),
+        Song(title: 'Beat It', artist: 'Michael Jackson', language: Language.english, year: 1982, theme: 'אלימות והימנעות', isBand: false),
+        Song(title: 'Purple Rain', artist: 'Prince', language: Language.english, year: 1984, theme: 'אהבה ואובדן', isBand: false),
+        Song(title: 'Eye of the Tiger', artist: 'Survivor', language: Language.english, year: 1982, theme: 'נחישות וכוח', isBand: true),
+        Song(title: 'Girls Just Want to Have Fun', artist: 'Cyndi Lauper', language: Language.english, year: 1983, theme: 'חופש ושמחה', isBand: false),
       ],
       isUnlocked: true,
     ),
@@ -574,13 +582,13 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       index: 2,
       title: 'שלב 2 - פופ ישראלי',
       songs: [
-        Song(title: 'נובמבר', artist: 'מירי מסיקה', language: Language.hebrew),
-        Song(title: 'עד הקצה', artist: 'דנה ברגר', language: Language.hebrew),
-        Song(title: 'השקט שנשאר', artist: 'שירי מימון', language: Language.hebrew),
-        Song(title: 'הלב', artist: 'מאיה בוסקילה', language: Language.hebrew),
-        Song(title: 'מלכת הדור', artist: 'עומר אדם', language: Language.hebrew),
-        Song(title: 'כמה עוד אפשר', artist: 'הראל סקעת', language: Language.hebrew),
-        Song(title:'מבול', artist: 'קרן פלס', language: Language.hebrew),
+        Song(title: 'נובמבר', artist: 'מירי מסיקה', language: Language.hebrew, year: 2003, theme: 'זיכרונות ואהבה', isBand: false),
+        Song(title: 'עד הקצה', artist: 'דנה ברגר', language: Language.hebrew, year: 2006, theme: 'תשוקה ואהבה', isBand: false),
+        Song(title: 'השקט שנשאר', artist: 'שירי מימון', language: Language.hebrew, year: 2012, theme: 'אובדן וזיכרון', isBand: false),
+        Song(title: 'הלב', artist: 'מאיה בוסקילה', language: Language.hebrew, year: 2010, theme: 'אהבה', isBand: false),
+        Song(title: 'מלכת הדור', artist: 'עומר אדם', language: Language.hebrew, year: 2016, theme: 'קסם ואהבה', isBand: false),
+        Song(title: 'כמה עוד אפשר', artist: 'הראל סקעת', language: Language.hebrew, year: 2009, theme: 'תסכול וכעס', isBand: false),
+        Song(title:'מבול', artist: 'קרן פלס', language: Language.hebrew, year: 2009, theme: 'רגשות עזים', isBand: false),
       ],
       isUnlocked: false,
     ),
@@ -590,14 +598,14 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       index: 3,
       title: 'שלב 3 - רוק ומזרחי',
       songs: [
-        Song(title: 'טקילה', artist: 'עומר אדם', language: Language.hebrew),
-        Song(title: 'חולות של תל אביב', artist: 'אושר כהן', language: Language.hebrew),
-        Song(title: 'זמן שזז', artist: 'עידן עמדי', language: Language.hebrew),
-        Song(title: 'רצים באדום', artist: 'תובל שפיר', language: Language.hebrew),
-        Song(title: 'מתי נתנשק', artist: 'ישיר', language: Language.hebrew),
-        Song(title: 'דבר אליי', artist: 'אייל גולן', language: Language.hebrew),
-        Song(title: 'ים של דמעות', artist: 'זהבה בן', language: Language.hebrew),
-        Song(title: 'אינטואיציה', artist: 'גדי צלניקר', language: Language.hebrew),
+        Song(title: 'טקילה', artist: 'עומר אדם', language: Language.hebrew, year: 2019, theme: 'מסיבה ואהבה', isBand: false),
+        Song(title: 'חולות של תל אביב', artist: 'אושר כהן', language: Language.hebrew, year: 2015, theme: 'עיר הולדת', isBand: false),
+        Song(title: 'זמן שזז', artist: 'עידן עמדי', language: Language.hebrew, year: 2014, theme: 'זמן ושינוי', isBand: false),
+        Song(title: 'רצים באדום', artist: 'תובל שפיר', language: Language.hebrew, year: 2016, theme: 'אהבה וסכנה', isBand: false),
+        Song(title: 'מתי נתנשק', artist: 'ישיר', language: Language.hebrew, year: 2021, theme: 'געגועים', isBand: true),
+        Song(title: 'דבר אליי', artist: 'אייל גולן', language: Language.hebrew, year: 2006, theme: 'תקשורת באהבה', isBand: false),
+        Song(title: 'ים של דמעות', artist: 'זהבה בן', language: Language.hebrew, year: 1988, theme: 'כאב ודמעות', isBand: false),
+        Song(title: 'אינטואיציה', artist: 'גדי צלניקר', language: Language.hebrew, year: 2018, theme: 'תחושת בטן', isBand: false),
       ],
       isUnlocked: false,
     ),
@@ -607,14 +615,14 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       index: 4,
       title: 'שלב 4 - היטים עולמיים עדכניים',
       songs: [
-        Song(title: 'Not Like Us', artist: 'Kendrick Lamar', language: Language.english),
-        Song(title: 'Espresso', artist: 'Sabrina Carpenter', language: Language.english),
-        Song(title: 'Beautiful Things', artist: 'Benson Boone', language: Language.english),
-        Song(title: 'A Bar Song (Tipsy)', artist: 'Shaboozey', language: Language.english),
-        Song(title: 'Houdini', artist: 'Dua Lipa', language: Language.english),
-        Song(title: 'As It Was', artist: 'Harry Styles', language: Language.english),
-        Song(title: 'Flowers', artist: 'Miley Cyrus', language: Language.english),
-        Song(title: 'Anti-Hero', artist: 'Taylor Swift', language: Language.english),
+        Song(title: 'Not Like Us', artist: 'Kendrick Lamar', language: Language.english, year: 2024, theme: 'מחלוקת והשוואה', isBand: false),
+        Song(title: 'Espresso', artist: 'Sabrina Carpenter', language: Language.english, year: 2024, theme: 'קפה ורומנטיקה', isBand: false),
+        Song(title: 'Beautiful Things', artist: 'Benson Boone', language: Language.english, year: 2024, theme: 'פחד לאבד', isBand: false),
+        Song(title: 'A Bar Song (Tipsy)', artist: 'Shaboozey', language: Language.english, year: 2024, theme: 'בר ומסיבה', isBand: false),
+        Song(title: 'Houdini', artist: 'Dua Lipa', language: Language.english, year: 2023, theme: 'היעלמות מאהבה', isBand: false),
+        Song(title: 'As It Was', artist: 'Harry Styles', language: Language.english, year: 2022, theme: 'שינוי ונוסטלגיה', isBand: false),
+        Song(title: 'Flowers', artist: 'Miley Cyrus', language: Language.english, year: 2023, theme: 'אהבה עצמית', isBand: false),
+        Song(title: 'Anti-Hero', artist: 'Taylor Swift', language: Language.english, year: 2022, theme: 'ביקורת עצמית', isBand: false),
       ],
       isUnlocked: false,
     ),
@@ -624,14 +632,14 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       index: 5,
       title: 'שלב 5 - שירי זמר (ישראליות נצחיות)',
       songs: [
-        Song(title: 'לו יהי', artist: 'נעמי שמר', language: Language.hebrew),
-        Song(title: 'אוף גוזל', artist: 'אריק איינשטיין', language: Language.hebrew),
-        Song(title: 'פתאום', artist: 'יהודית רביץ', language: Language.hebrew),
-        Song(title: 'שיר לשלום', artist: 'מירי אלוני', language: Language.hebrew),
-        Song(title: 'הבלדה על חדוה ושלומיק', artist: 'שלום חנוך', language: Language.hebrew),
-        Song(title: 'רחוב האגס 1', artist: 'להקת כוורת', language: Language.hebrew),
-        Song(title: 'אני ואתה', artist: 'אריק איינשטיין', language: Language.hebrew), // ← אם תרצי, אוכל להחליף כדי לשמור בלי כפילויות אמנים בכלל בשלבים
-        Song(title: 'יש כוכבים', artist: 'נורית גלרון', language: Language.hebrew),
+        Song(title: 'לו יהי', artist: 'נעמי שמר', language: Language.hebrew, year: 1973, theme: 'שלום ותקווה', isBand: false),
+        Song(title: 'אוף גוזל', artist: 'אריק איינשטיין', language: Language.hebrew, year: 1982, theme: 'אהבה', isBand: false),
+        Song(title: 'פתאום', artist: 'יהודית רביץ', language: Language.hebrew, year: 1978, theme: 'פגישה באקראי', isBand: false),
+        Song(title: 'שיר לשלום', artist: 'מירי אלוני', language: Language.hebrew, year: 1969, theme: 'שלום', isBand: false),
+        Song(title: 'הבלדה על חדוה ושלומיק', artist: 'שלום חנוך', language: Language.hebrew, year: 1969, theme: 'סיפור אהבה טראגי', isBand: false),
+        Song(title: 'רחוב האגס 1', artist: 'להקת כוורת', language: Language.hebrew, year: 1973, theme: 'ילדות ונוסטלגיה', isBand: true),
+        Song(title: 'אני ואתה', artist: 'אריק איינשטיין', language: Language.hebrew, year: 1974, theme: 'שינוי העולם ביחד', isBand: false),
+        Song(title: 'יש כוכבים', artist: 'נורית גלרון', language: Language.hebrew, year: 1977, theme: 'כוכבים וחלומות', isBand: false),
       ],
       isUnlocked: false,
     ),
@@ -641,14 +649,14 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       index: 6,
       title: 'שלב 6 - דאנס ואלקטרוני',
       songs: [
-        Song(title: 'Wake Me Up', artist: 'Avicii', language: Language.english),
-        Song(title: 'One Kiss', artist: 'Calvin Harris', language: Language.english),
-        Song(title: 'Head & Heart', artist: 'Joel Corry', language: Language.english),
-        Song(title: 'I\'m Good (Blue)', artist: 'David Guetta', language: Language.english),
-        Song(title: 'Closer', artist: 'The Chainsmokers', language: Language.english),
-        Song(title: 'Despacito', artist: 'Luis Fonsi', language: Language.english),
-        Song(title: 'Pepas', artist: 'Farruko', language: Language.english),
-        Song(title: 'Titanium', artist: 'David Guetta ft Sia', language: Language.english),
+        Song(title: 'Wake Me Up', artist: 'Avicii', language: Language.english, year: 2013, theme: 'התבגרות ומציאת דרך', isBand: false),
+        Song(title: 'One Kiss', artist: 'Calvin Harris', language: Language.english, year: 2018, theme: 'נשיקה אחת', isBand: false),
+        Song(title: 'Head & Heart', artist: 'Joel Corry', language: Language.english, year: 2020, theme: 'קונפליקט פנימי', isBand: false),
+        Song(title: 'I\'m Good (Blue)', artist: 'David Guetta', language: Language.english, year: 2022, theme: 'הרגשה טובה', isBand: false),
+        Song(title: 'Closer', artist: 'The Chainsmokers', language: Language.english, year: 2016, theme: 'קרבה ונוסטלגיה', isBand: true),
+        Song(title: 'Despacito', artist: 'Luis Fonsi', language: Language.english, year: 2017, theme: 'רומנטיקה איטית', isBand: false),
+        Song(title: 'Pepas', artist: 'Farruko', language: Language.english, year: 2021, theme: 'מסיבה ואנרגיה', isBand: false),
+        Song(title: 'Titanium', artist: 'David Guetta ft Sia', language: Language.english, year: 2011, theme: 'כוח ועמידות', isBand: false),
       ],
       isUnlocked: false,
     ),
@@ -658,14 +666,14 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       index: 7,
       title: 'שלב 7 - היפ הופ ו-R&B',
       songs: [
-        Song(title: 'Lose Yourself', artist: 'Eminem', language: Language.english),
-        Song(title: 'In Da Club', artist: '50 Cent', language: Language.english),
-        Song(title: 'Hotline Bling', artist: 'Drake', language: Language.english),
-        Song(title: 'HUMBLE.', artist: 'Kendrick Lamar', language: Language.english),
-        Song(title: 'Crazy in Love', artist: 'Beyoncé', language: Language.english),
-        Song(title: 'Umbrella', artist: 'Rihanna', language: Language.english),
-        Song(title: 'Gold Digger', artist: 'Kanye West', language: Language.english),
-        Song(title: 'See You Again', artist: 'Wiz Khalifa', language: Language.english),
+        Song(title: 'Lose Yourself', artist: 'Eminem', language: Language.english, year: 2002, theme: 'הזדמנות אחת', isBand: false),
+        Song(title: 'In Da Club', artist: '50 Cent', language: Language.english, year: 2003, theme: 'מסיבת יומולדת', isBand: false),
+        Song(title: 'Hotline Bling', artist: 'Drake', language: Language.english, year: 2015, theme: 'שיחות טלפון באהבה', isBand: false),
+        Song(title: 'HUMBLE.', artist: 'Kendrick Lamar', language: Language.english, year: 2017, theme: 'ענווה ואמת', isBand: false),
+        Song(title: 'Crazy in Love', artist: 'Beyoncé', language: Language.english, year: 2003, theme: 'אהבה משוגעת', isBand: false),
+        Song(title: 'Umbrella', artist: 'Rihanna', language: Language.english, year: 2007, theme: 'הגנה ותמיכה', isBand: false),
+        Song(title: 'Gold Digger', artist: 'Kanye West', language: Language.english, year: 2005, theme: 'אהבה למען כסף', isBand: false),
+        Song(title: 'See You Again', artist: 'Wiz Khalifa', language: Language.english, year: 2015, theme: 'זיכרון וחברות', isBand: false),
       ],
       isUnlocked: false,
     ),
@@ -675,14 +683,14 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       index: 8,
       title: 'שלב 8 - שנות ה-80 וה-90',
       songs: [
-        Song(title: 'Take On Me', artist: 'a-ha', language: Language.english),
-        Song(title: 'Livin\' on a Prayer', artist: 'Bon Jovi', language: Language.english),
-        Song(title: 'Sweet Dreams', artist: 'Eurythmics', language: Language.english),
-        Song(title: 'Every Breath You Take', artist: 'The Police', language: Language.english),
-        Song(title: 'Wonderwall', artist: 'Oasis', language: Language.english),
-        Song(title: 'Baby One More Time', artist: 'Britney Spears', language: Language.english),
-        Song(title: 'Wannabe', artist: 'Spice Girls', language: Language.english),
-        Song(title: 'Vogue', artist: 'Madonna', language: Language.english),
+        Song(title: 'Take On Me', artist: 'a-ha', language: Language.english, year: 1985, theme: 'אהבה רומנטית', isBand: true),
+        Song(title: 'Livin\' on a Prayer', artist: 'Bon Jovi', language: Language.english, year: 1986, theme: 'אהבה ומאבק', isBand: true),
+        Song(title: 'Sweet Dreams', artist: 'Eurythmics', language: Language.english, year: 1983, theme: 'שאיפות ורצונות', isBand: true),
+        Song(title: 'Every Breath You Take', artist: 'The Police', language: Language.english, year: 1983, theme: 'אובססיה ואהבה', isBand: true),
+        Song(title: 'Wonderwall', artist: 'Oasis', language: Language.english, year: 1995, theme: 'אהבה והצלה', isBand: true),
+        Song(title: 'Baby One More Time', artist: 'Britney Spears', language: Language.english, year: 1998, theme: 'געגועים באהבה', isBand: false),
+        Song(title: 'Wannabe', artist: 'Spice Girls', language: Language.english, year: 1996, theme: 'חברות ואהבה', isBand: true),
+        Song(title: 'Vogue', artist: 'Madonna', language: Language.english, year: 1990, theme: 'אופנה וביטוי עצמי', isBand: false),
       ],
       isUnlocked: false,
     ),
@@ -692,14 +700,14 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       index: 9,
       title: 'שלב 9 - ישראלי חדש (2024–2025)',
       songs: [
-        Song(title: 'Hurricane', artist: 'Eden Golan', language: Language.english), // אמנית ישראלית, שיר באנגלית
-        Song(title: 'רוקי', artist: 'אודיה', language: Language.hebrew),
-        Song(title: 'היא לא יודעת למה', artist: 'פאר טסי', language: Language.hebrew),
-        Song(title: 'אהבתי זה אתמול', artist: 'יונתן מרגי (Margie)', language: Language.hebrew),
-        Song(title: 'בסיבוב הבא', artist: 'עדן בן זקן', language: Language.hebrew),
-        Song(title: 'מליון קילומטר', artist: 'יסמין מועלם', language: Language.hebrew),
-        Song(title: 'אלייך', artist: 'אדיר גץ', language: Language.hebrew),
-        Song(title: 'שב עליי', artist: 'רביב כנר', language: Language.hebrew),
+        Song(title: 'Hurricane', artist: 'Eden Golan', language: Language.english, year: 2024, theme: 'סופה פנימית', isBand: false),
+        Song(title: 'רוקי', artist: 'אודיה', language: Language.hebrew, year: 2024, theme: 'כוח ולחימה', isBand: false),
+        Song(title: 'היא לא יודעת למה', artist: 'פאר טסי', language: Language.hebrew, year: 2024, theme: 'אי הבנה באהבה', isBand: false),
+        Song(title: 'אהבתי זה אתמול', artist: 'יונתן מרגי (Margie)', language: Language.hebrew, year: 2024, theme: 'אהבה שעברה', isBand: false),
+        Song(title: 'בסיבוב הבא', artist: 'עדן בן זקן', language: Language.hebrew, year: 2024, theme: 'הזדמנות נוספת', isBand: false),
+        Song(title: 'מליון קילומטר', artist: 'יסמין מועלם', language: Language.hebrew, year: 2024, theme: 'מרחק ואהבה', isBand: false),
+        Song(title: 'אלייך', artist: 'אדיר גץ', language: Language.hebrew, year: 2024, theme: 'געגועים', isBand: false),
+        Song(title: 'שב עליי', artist: 'רביב כנר', language: Language.hebrew, year: 2024, theme: 'תשוקה', isBand: false),
       ],
       isUnlocked: false,
     ),
@@ -709,14 +717,14 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       index: 10,
       title: 'שלב 10 - אתגר אמיתי (ביצועי שירה)',
       songs: [
-        Song(title: 'אין אותי', artist: 'נועה קירל', language: Language.hebrew),
-        Song(title: 'אם את כבר הולכת', artist: 'נדב חנציס', language: Language.hebrew),
-        Song(title: 'הבלדה על סוסי', artist: 'אדיק', language: Language.hebrew),
-        Song(title: 'רגע מתוק', artist: 'דודו טסה', language: Language.hebrew),
-        Song(title: 'סיבת הסיבות', artist: 'ישי ריבו', language: Language.hebrew),
-        Song(title: 'מתנות קטנות', artist: 'רן דנקר', language: Language.hebrew),
-        Song(title: 'שיר אהבה בדואי', artist: 'רונית שחר', language: Language.hebrew),
-        Song(title: 'Perfect', artist: 'Ed Sheeran', language: Language.english),
+        Song(title: 'אין אותי', artist: 'נועה קירל', language: Language.hebrew, year: 2019, theme: 'עצמאות והישארות', isBand: false),
+        Song(title: 'אם את כבר הולכת', artist: 'נדב חנציס', language: Language.hebrew, year: 2020, theme: 'פרידה', isBand: false),
+        Song(title: 'הבלדה על סוסי', artist: 'אדיק', language: Language.hebrew, year: 2021, theme: 'סיפור אישי', isBand: false),
+        Song(title: 'רגע מתוק', artist: 'דודו טסה', language: Language.hebrew, year: 2018, theme: 'רגע קסום', isBand: false),
+        Song(title: 'סיבת הסיבות', artist: 'ישי ריבו', language: Language.hebrew, year: 2016, theme: 'אמונה ותודה', isBand: false),
+        Song(title: 'מתנות קטנות', artist: 'רן דנקר', language: Language.hebrew, year: 2017, theme: 'הערכה לדברים קטנים', isBand: false),
+        Song(title: 'שיר אהבה בדואי', artist: 'רונית שחר', language: Language.hebrew, year: 1984, theme: 'אהבה במדבר', isBand: false),
+        Song(title: 'Perfect', artist: 'Ed Sheeran', language: Language.english, year: 2017, theme: 'אהבה מושלמת', isBand: false),
       ],
       isUnlocked: false,
     ),
@@ -1233,7 +1241,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
   int attempts = 0;
 
   // hints
-  final List<int> hintCosts = [5, 10, 10];
+  final List<int> hintCosts = [50, 50, 50];
   int hintsUsed = 0;
   final List<String> shownHints = [];
 
@@ -1397,8 +1405,22 @@ class _GamePlayPageState extends State<GamePlayPage> {
 
   String _getHintText() {
     if (hintsUsed == 0) {
-      final firstWord = song.title.split(' ').first;
-      return 'רמז: המילה הראשונה בשם השיר היא "$firstWord"';
+      // First hint: Band/Artist type, Year, or Theme
+      final hints = <String>[];
+      if (song.isBand != null) {
+        hints.add(song.isBand! ? 'זו להקה' : 'זה אמן/ית סולו');
+      }
+      if (song.year != null) {
+        hints.add('השיר יצא בשנת ${song.year}');
+      }
+      if (song.theme != null) {
+        hints.add('השיר מדבר על ${song.theme}');
+      }
+      if (hints.isEmpty) {
+        final firstWord = song.title.split(' ').first;
+        return 'רמז: המילה הראשונה בשם השיר היא "$firstWord"';
+      }
+      return 'רמז: ${hints.join(' • ')}';
     } else if (hintsUsed == 1) {
       return 'רמז: האמן/ת הוא/היא ${song.artist}';
     } else {
