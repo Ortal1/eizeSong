@@ -127,15 +127,25 @@ class _SongGuessAppState extends State<SongGuessApp> {
   }
 
   Future<Widget> _getHomePage() async {
-    final username = await UserDataHelper.getUsername();
+    try {
+      final username = await UserDataHelper.getUsername()
+          .timeout(const Duration(seconds: 2));
 
-    if (username != null && username.isNotEmpty) {
-      // User exists, load their data
-      final score = await UserDataHelper.getScore();
-      _score.value = score;
-      return SplashPage(score: _score);
-    } else {
-      // No user, show login
+      if (username != null && username.isNotEmpty) {
+        // User exists, load their data
+        final score = await UserDataHelper.getScore()
+            .timeout(const Duration(seconds: 1));
+        _score.value = score;
+        return SplashPage(score: _score);
+      } else {
+        // No user, show login
+        return LoginPage(score: _score);
+      }
+    } catch (e) {
+      // If there's any error or timeout, show login page
+      if (kDebugMode) {
+        print('Error loading user data: $e');
+      }
       return LoginPage(score: _score);
     }
   }
@@ -549,24 +559,43 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
 
-    // Save username
-    await UserDataHelper.saveUsername(username);
+    try {
+      // Save username
+      await UserDataHelper.saveUsername(username)
+          .timeout(const Duration(seconds: 3));
 
-    // Load user data
-    final score = await UserDataHelper.getScore();
-    widget.score.value = score;
+      // Load user data
+      final score = await UserDataHelper.getScore()
+          .timeout(const Duration(seconds: 2));
+      widget.score.value = score;
 
-    setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    // Navigate to splash page
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SplashPage(score: widget.score),
-      ),
-    );
+      // Navigate to splash page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SplashPage(score: widget.score),
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error during login: $e');
+      }
+      setState(() => _isLoading = false);
+
+      if (!mounted) return;
+
+      // Even if save fails, still navigate (for web compatibility)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SplashPage(score: widget.score),
+        ),
+      );
+    }
   }
 
   @override
@@ -604,7 +633,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'ברוכים הבאים!',
+                    'ברוכה הבאה ואם שבה אז שווה!',
                     style: TextStyle(
                       fontSize: 20,
                       color: Color(0xFF16213e),
@@ -995,20 +1024,28 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
   }
 
   Future<void> _loadSavedProgress() async {
-    final solvedSongs = await UserDataHelper.getSolvedSongs();
+    try {
+      final solvedSongs = await UserDataHelper.getSolvedSongs()
+          .timeout(const Duration(seconds: 2));
 
-    for (int levelIndex = 0; levelIndex < levels.length; levelIndex++) {
-      final level = levels[levelIndex];
-      for (int songIndex = 0; songIndex < level.songs.length; songIndex++) {
-        final songKey = UserDataHelper.getSongKey(level.index, songIndex);
-        if (solvedSongs[songKey] == true) {
-          level.songs[songIndex].isSolved = true;
+      for (int levelIndex = 0; levelIndex < levels.length; levelIndex++) {
+        final level = levels[levelIndex];
+        for (int songIndex = 0; songIndex < level.songs.length; songIndex++) {
+          final songKey = UserDataHelper.getSongKey(level.index, songIndex);
+          if (solvedSongs[songKey] == true) {
+            level.songs[songIndex].isSolved = true;
+          }
         }
       }
-    }
 
-    if (mounted) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      // If loading fails, just continue without saved progress
+      if (kDebugMode) {
+        print('Error loading saved progress: $e');
+      }
     }
   }
 
