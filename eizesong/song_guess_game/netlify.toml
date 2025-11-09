@@ -6,6 +6,9 @@
   # Specify Flutter channel and version if needed
   # FLUTTER_VERSION = "stable"
 
+[[plugins]]
+  package = "netlify-plugin-flutter"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
