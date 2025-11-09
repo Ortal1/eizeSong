@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "288886376879",
+    "project_id": "eizesong",
+    "storage_bucket": "eizesong.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:288886376879:android:10cb43dab5c821f348475a",
+        "android_client_info": {
+          "package_name": "com.eizesong"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNoz2w-7mY1iuDot-S0ssPug2dZ0QWIBQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:288886376879:android:c6be1b8e32e2089d48475a",
+        "android_client_info": {
+          "package_name": "com.example.song_guess_game"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNoz2w-7mY1iuDot-S0ssPug2dZ0QWIBQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

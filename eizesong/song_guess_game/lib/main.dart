@@ -4,6 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'ad_helper.dart';
+import 'analytics_helper.dart';
+import 'firebase_options.dart';
 
 
 /* =========================
@@ -37,7 +42,13 @@ class AudioFx {
     } catch (_) {}
   }
 }
-void main() => runApp(const SongGuessApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await MobileAds.instance.initialize();
+  await AnalyticsHelper.logAppStart();
+  runApp(const SongGuessApp());
+}
 
 /* =========================
    ROOT APP + GLOBAL SCORE
@@ -368,50 +379,48 @@ bool isTitleMatch(String userInput, String expected) {
   return false;
 }
 
-Future<String?> fetchPreviewUrl(String title, String artist) async {
-  // cache first
-  final cached = PreviewCache.get(title, artist);
-  if (cached != null) return cached;
-
-  final q = Uri.encodeQueryComponent('$artist $title');
-  final uri = Uri.parse('https://itunes.apple.com/search?term=$q&entity=song&limit=5&country=IL');
-
-  final client = http.Client();
+/// Fetches preview URL from iTunes Search API
+Future<String?> fetchItunesPreview(String title, String artist) async {
   try {
-    final res = await client.get(uri).timeout(const Duration(seconds: 5));
-    if (res.statusCode != 200) return null;
+    final q = Uri.encodeQueryComponent('$artist $title');
+    final uri = Uri.parse('https://itunes.apple.com/search?term=$q&entity=song&limit=5&country=IL');
 
-    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    final response = await http.get(uri).timeout(const Duration(seconds: 5));
+    if (response.statusCode != 200) return null;
+
+    final data = json.decode(response.body) as Map<String, dynamic>;
     final results = (data['results'] as List).cast<Map<String, dynamic>>();
     if (results.isEmpty) return null;
 
+    // Find best match
     final tNorm = normalize(title);
     final aNorm = normalize(artist);
 
-    Map<String, dynamic>? best = results.firstWhere(
-      (r) {
-        final tn = normalize(r['trackName']?.toString() ?? '');
-        final an = normalize(r['artistName']?.toString() ?? '');
-        return tn.isNotEmpty &&
-            an.isNotEmpty &&
-            (tn.contains(tNorm) || tNorm.contains(tn)) &&
-            (an.contains(aNorm) || aNorm.contains(an)) &&
-            r['previewUrl'] != null;
-      },
-      orElse: () => {},
-    );
+    for (final r in results) {
+      final tn = normalize(r['trackName']?.toString() ?? '');
+      final an = normalize(r['artistName']?.toString() ?? '');
+      if (tn.isNotEmpty &&
+          an.isNotEmpty &&
+          (tn.contains(tNorm) || tNorm.contains(tn)) &&
+          (an.contains(aNorm) || aNorm.contains(an)) &&
+          r['previewUrl'] != null) {
+        return r['previewUrl'] as String;
+      }
+    }
 
-    best = (best.isNotEmpty)
-        ? best
-        : results.firstWhere((r) => r['previewUrl'] != null, orElse: () => {});
+    // Fallback: first result with preview
+    for (final r in results) {
+      if (r['previewUrl'] != null) {
+        return r['previewUrl'] as String;
+      }
+    }
 
-    final url = (best.isNotEmpty) ? best['previewUrl'] as String? : null;
-    PreviewCache.set(title, artist, url);
-    return url;
-  } catch (_) {
     return null;
-  } finally {
-    client.close();
+  } catch (e) {
+    if (kDebugMode) {
+      print('⚠️ [ITUNES] Error: $e');
+    }
+    return null;
   }
 }
 
@@ -524,11 +533,43 @@ class LevelSelectionPage extends StatefulWidget {
 }
 
 class _LevelSelectionPageState extends State<LevelSelectionPage> {
+  InterstitialAd? _interstitialAd;
+  bool _isAdLoaded = false;
+
   late final List<Level> levels = [
     // 1
     Level(
       index: 1,
-      title: 'שלב 1 - פופ ישראלי',
+      title: 'שלב לאה - שירי קאלט משנות ה-70 וה-80',
+      songs: [
+        Song(title: 'Bohemian Rhapsody', artist: 'Queen', language: Language.english),
+        Song(title: 'Hotel California', artist: 'Eagles', language: Language.english),
+        Song(title: 'Stairway to Heaven', artist: 'Led Zeppelin', language: Language.english),
+        Song(title: 'Imagine', artist: 'John Lennon', language: Language.english),
+        Song(title: 'Don\'t Stop Believin\'', artist: 'Journey', language: Language.english),
+        Song(title: 'Sweet Child O\' Mine', artist: 'Guns N\' Roses', language: Language.english),
+        Song(title: 'Billie Jean', artist: 'Michael Jackson', language: Language.english),
+        Song(title: 'Stayin\' Alive', artist: 'Bee Gees', language: Language.english),
+        Song(title: 'I Will Survive', artist: 'Gloria Gaynor', language: Language.english),
+        Song(title: 'Africa', artist: 'Toto', language: Language.english),
+        Song(title: 'Livin\' on a Prayer', artist: 'Bon Jovi', language: Language.english),
+        Song(title: 'Sweet Dreams', artist: 'Eurythmics', language: Language.english),
+        Song(title: 'Take On Me', artist: 'a-ha', language: Language.english),
+        Song(title: 'Every Breath You Take', artist: 'The Police', language: Language.english),
+        Song(title: 'With or Without You', artist: 'U2', language: Language.english),
+        Song(title: 'Careless Whisper', artist: 'George Michael', language: Language.english),
+        Song(title: 'Beat It', artist: 'Michael Jackson', language: Language.english),
+        Song(title: 'Purple Rain', artist: 'Prince', language: Language.english),
+        Song(title: 'Eye of the Tiger', artist: 'Survivor', language: Language.english),
+        Song(title: 'Girls Just Want to Have Fun', artist: 'Cyndi Lauper', language: Language.english),
+      ],
+      isUnlocked: true,
+    ),
+
+    // 2
+    Level(
+      index: 2,
+      title: 'שלב 2 - פופ ישראלי',
       songs: [
         Song(title: 'נובמבר', artist: 'מירי מסיקה', language: Language.hebrew),
         Song(title: 'עד הקצה', artist: 'דנה ברגר', language: Language.hebrew),
@@ -537,23 +578,6 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
         Song(title: 'מלכת הדור', artist: 'עומר אדם', language: Language.hebrew),
         Song(title: 'כמה עוד אפשר', artist: 'הראל סקעת', language: Language.hebrew),
         Song(title:'מבול', artist: 'קרן פלס', language: Language.hebrew),
-      ],
-      isUnlocked: true,
-    ),
-
-    // 2
-    Level(
-      index: 2,
-      title: 'שלב 2 - פופ ישראלי עכשווי',
-      songs: [
-        Song(title: 'פרובוקטיבית', artist: 'נועה קירל', language: Language.hebrew),
-        Song(title: 'סקסית', artist: 'עדן גולן', language: Language.hebrew),
-        Song(title:'צוחקת ובוכה', artist: 'עדן חסון', language: Language.hebrew),
-        Song(title: 'דופק', artist: 'אנה זק', language: Language.hebrew),
-        Song(title: 'בלילות', artist: 'נרקיס', language: Language.hebrew),
-        Song(title: 'הכל זהב', artist: 'שירי מימון', language: Language.hebrew),
-        Song(title: 'היי בייבי', artist: 'סטטיק', language: Language.hebrew),
-        Song(title: 'תני לי סימן', artist: 'מאור אשואל', language: Language.hebrew),
       ],
       isUnlocked: false,
     ),
@@ -700,6 +724,70 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
     super.initState();
     // Preload the first unsolved song from the first unlocked level
     _preloadFirstSong();
+    // Load interstitial ad
+    _loadInterstitialAd();
+  }
+
+  @override
+  void dispose() {
+    _interstitialAd?.dispose();
+    super.dispose();
+  }
+
+  void _loadInterstitialAd() {
+    print('🔄 Loading interstitial ad...');
+    InterstitialAd.load(
+      adUnitId: AdHelper.interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          print('✅ Ad loaded successfully!');
+          _interstitialAd = ad;
+          _isAdLoaded = true;
+
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              print('📱 Ad dismissed');
+              ad.dispose();
+              _loadInterstitialAd(); // Load next ad
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              print('❌ Ad failed to show: $error');
+              ad.dispose();
+              _loadInterstitialAd(); // Load next ad
+            },
+          );
+        },
+        onAdFailedToLoad: (error) {
+          print('❌ Ad failed to load: $error');
+          _isAdLoaded = false;
+        },
+      ),
+    );
+  }
+
+  void _showInterstitialAd() {
+    print('🎬 Attempting to show ad... isLoaded: $_isAdLoaded');
+    if (_isAdLoaded && _interstitialAd != null) {
+      print('✅ Showing ad now!');
+
+      // Log analytics for ad shown
+      AnalyticsHelper.logAdShown(
+        adType: 'interstitial',
+        trigger: 'level_complete',
+      );
+
+      _interstitialAd!.show();
+      _isAdLoaded = false;
+    } else {
+      print('❌ Ad not ready. isLoaded: $_isAdLoaded, ad: $_interstitialAd');
+
+      // Log analytics for ad failure
+      AnalyticsHelper.logAdFailedToShow(
+        adType: 'interstitial',
+        error: 'Ad not loaded',
+      );
+    }
   }
 
   Future<void> _preloadFirstSong() async {
@@ -715,13 +803,13 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
       orElse: () => unlockedLevel.songs.first,
     );
 
-    // Preload the preview
+    // Preload the preview from iTunes
     if (firstUnsolved.previewUrl == null) {
       final cached = PreviewCache.get(firstUnsolved.title, firstUnsolved.artist);
       if (cached != null) {
         firstUnsolved.previewUrl = cached;
       } else {
-        final url = await fetchPreviewUrl(firstUnsolved.title, firstUnsolved.artist);
+        final url = await fetchItunesPreview(firstUnsolved.title, firstUnsolved.artist);
         if (url != null) {
           firstUnsolved.previewUrl = url;
           PreviewCache.set(firstUnsolved.title, firstUnsolved.artist, url);
@@ -732,6 +820,14 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
 
   void _openLevel(Level level) async {
     if (!level.isUnlocked) return;
+
+    // Log analytics
+    await AnalyticsHelper.logLevelSelected(level.index, level.title);
+
+    final needed = (level.songs.length * 0.7).ceil();
+    final solvedCountBefore = level.solvedCount;
+    print('📊 Opening level ${level.index}: needed=$needed, before=$solvedCountBefore');
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -755,6 +851,25 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
     // עדכון המסך כשחוזרים
     if (mounted) {
       setState(() {});
+
+      // הצגת פרסומת אם השלב הושלם
+      final solvedCountAfter = level.solvedCount;
+      print('📊 After level ${level.index}: needed=$needed, after=$solvedCountAfter');
+
+      if (solvedCountBefore < needed && solvedCountAfter >= needed) {
+        print('🎉 LEVEL COMPLETED! Showing ad in 500ms...');
+        // Log level completion
+        AnalyticsHelper.logLevelCompleted(
+          levelIndex: level.index,
+          levelTitle: level.title,
+          totalPoints: widget.score.value,
+        );
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _showInterstitialAd();
+        });
+      } else {
+        print('⏳ Level not completed yet. Before: $solvedCountBefore, After: $solvedCountAfter, Needed: $needed');
+      }
     }
   }
 
@@ -780,7 +895,6 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, i) {
                     final level = levels[i];
-                    final needed = (level.songs.length * 0.7).ceil();
                     return InkWell(
                       onTap: () => _openLevel(level),
                       borderRadius: BorderRadius.circular(20),
@@ -868,7 +982,7 @@ class _SongSelectionPageState extends State<SongSelectionPage> {
       if (cached != null) {
         firstUnsolved.previewUrl = cached;
       } else {
-        final url = await fetchPreviewUrl(firstUnsolved.title, firstUnsolved.artist);
+        final url = await fetchItunesPreview(firstUnsolved.title, firstUnsolved.artist);
         if (url != null) {
           firstUnsolved.previewUrl = url;
           PreviewCache.set(firstUnsolved.title, firstUnsolved.artist, url);
@@ -883,7 +997,7 @@ class _SongSelectionPageState extends State<SongSelectionPage> {
         if (cached != null) {
           s.previewUrl = cached;
         } else {
-          final url = await fetchPreviewUrl(s.title, s.artist);
+          final url = await fetchItunesPreview(s.title, s.artist);
           if (url != null) {
             s.previewUrl = url;
             PreviewCache.set(s.title, s.artist, url);
@@ -1033,38 +1147,44 @@ class _SongSelectionPageState extends State<SongSelectionPage> {
                   ],
                 ),
               )
-            : ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: songs.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, i) {
-                  final song = songs[i];
-                  final isDone = song.isSolved;
-                  return InkWell(
-                    onTap: () => _openSong(i),
-                    borderRadius: BorderRadius.circular(20),
-                    child: GlassCard(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.music_note, color: Colors.white70),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'שיר ${i + 1}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            : Column(
+                children: [
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: songs.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, i) {
+                        final song = songs[i];
+                        final isDone = song.isSolved;
+                        return InkWell(
+                          onTap: () => _openSong(i),
+                          borderRadius: BorderRadius.circular(20),
+                          child: GlassCard(
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.music_note, color: Colors.white70),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'שיר ${i + 1}',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                                Icon(
+                                  isDone ? Icons.check_circle : Icons.play_circle_fill,
+                                  color: isDone ? Colors.greenAccent : Colors.white,
+                                ),
+                              ],
                             ),
                           ),
-                          Icon(
-                            isDone ? Icons.check_circle : Icons.play_circle_fill,
-                            color: isDone ? Colors.greenAccent : Colors.white,
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
       ),
     );
@@ -1110,6 +1230,10 @@ class _GamePlayPageState extends State<GamePlayPage> {
   int hintsUsed = 0;
   final List<String> shownHints = [];
 
+  // Rewarded ad for hints
+  RewardedAd? _rewardedAd;
+  bool _isRewardedAdLoaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -1117,30 +1241,92 @@ class _GamePlayPageState extends State<GamePlayPage> {
     _player.onPlayerStateChanged.listen((s) {
       if (mounted) setState(() => isPlaying = s == PlayerState.playing);
     });
-    // Focus input after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _inputFocus.requestFocus();
-    });
     // Preload song preview in background immediately
     _ensurePreview();
+    // Load rewarded ad
+    _loadRewardedAd();
   }
 
   @override
   void dispose() {
     _inputFocus.dispose();
     _controller.dispose();
+    _rewardedAd?.dispose();
     super.dispose();
   }
 
+  void _loadRewardedAd() {
+    print('🎁 Loading rewarded ad...');
+    RewardedAd.load(
+      adUnitId: AdHelper.rewardedAdUnitId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          print('✅ Rewarded ad loaded!');
+          _rewardedAd = ad;
+          _isRewardedAdLoaded = true;
+
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              print('📱 Rewarded ad dismissed');
+              ad.dispose();
+              _loadRewardedAd(); // Load next ad
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              print('❌ Rewarded ad failed to show: $error');
+              ad.dispose();
+              _loadRewardedAd(); // Load next ad
+            },
+          );
+        },
+        onAdFailedToLoad: (error) {
+          print('❌ Rewarded ad failed to load: $error');
+          _isRewardedAdLoaded = false;
+        },
+      ),
+    );
+  }
+
   Future<void> _ensurePreview() async {
-    if (song.previewUrl != null) return;
+    if (song.previewUrl != null) {
+      if (kDebugMode) {
+        print('🎵 [PREVIEW] Using cached preview for "${song.title}" by ${song.artist}');
+      }
+      return;
+    }
+
     setState(() => isLoadingSong = true);
+
     final cached = PreviewCache.get(song.title, song.artist);
     if (cached != null) {
       song.previewUrl = cached;
-    } else {
-      song.previewUrl = await fetchPreviewUrl(song.title, song.artist);
+      if (kDebugMode) {
+        print('💾 [CACHE] Found cached preview for "${song.title}" by ${song.artist}');
+      }
+      setState(() => isLoadingSong = false);
+      return;
     }
+
+    // Fetch from iTunes
+    if (kDebugMode) {
+      print('🔍 [ITUNES] Searching iTunes for "${song.title}" by ${song.artist}');
+    }
+    final previewUrl = await fetchItunesPreview(song.title, song.artist);
+    if (previewUrl != null) {
+      song.previewUrl = previewUrl;
+      PreviewCache.set(song.title, song.artist, previewUrl);
+      if (kDebugMode) {
+        print('✅ [ITUNES] Found preview on iTunes!');
+        print('🔗 Preview URL: $previewUrl');
+      }
+    } else {
+      if (kDebugMode) {
+        print('❌ [ITUNES] No preview found on iTunes for "${song.title}" by ${song.artist}');
+        print('⛔ Song will not be playable - iTunes preview required!');
+      }
+      song.previewUrl = null;
+    }
+
     setState(() => isLoadingSong = false);
   }
 
@@ -1154,15 +1340,22 @@ class _GamePlayPageState extends State<GamePlayPage> {
     await _ensurePreview();
     if (song.previewUrl == null) {
       setState(() => isLoadingPlay = false);
-      _snack('.לא נמצא קטע מקוון לשיר הזה 😢 נסי שיר אחר או דלגי על שיר זה');
+      _snack('לא נמצא קטע תצוגה לשיר הזה 😢 נסי שיר אחר או דלגי');
       return;
     }
     startTime ??= DateTime.now();
 
+    // Log analytics for song play
+    AnalyticsHelper.logSongPlayed(
+      levelIndex: widget.level.index,
+      songIndex: widget.songIndex,
+      exposureSeconds: exposureSeconds,
+    );
+
     // Stop any current playback
     await _player.stop();
 
-    // Set the source URL
+    // Set the source URL (from Spotify preview or fallback)
     await _player.setSourceUrl(song.previewUrl!);
 
     // Make sure we start from the beginning (0 seconds)
@@ -1192,25 +1385,86 @@ class _GamePlayPageState extends State<GamePlayPage> {
     }
   }
 
+  String _getHintText() {
+    if (hintsUsed == 0) {
+      final firstWord = song.title.split(' ').first;
+      return 'רמז: המילה הראשונה בשם השיר היא "$firstWord"';
+    } else if (hintsUsed == 1) {
+      return 'רמז: האמן/ת הוא/היא ${song.artist}';
+    } else {
+      final head = song.title.substring(0, song.title.length.clamp(0, 3));
+      return 'רמז: תחילת השם כוללת "$head"';
+    }
+  }
+
   void _useHint() {
     if (hintsUsed >= 3) return;
     final cost = hintCosts[hintsUsed];
 
-    String hint;
-    if (hintsUsed == 0) {
-      final firstWord = song.title.split(' ').first;
-      hint = 'רמז: המילה הראשונה בשם השיר היא "$firstWord"';
-    } else if (hintsUsed == 1) {
-      hint = 'רמז: האמן/ת הוא/היא ${song.artist}';
-    } else {
-      final head = song.title.substring(0, song.title.length.clamp(0, 3));
-      hint = 'רמז: תחילת השם כוללת "$head"';
+    // Check if user has enough points
+    if (widget.score.value < cost) {
+      _snack('אין לך מספיק נקודות! צפי בפרסומת לקבל רמז 📺');
+      return;
     }
 
+    final hint = _getHintText();
+
+    // Log analytics for hint use
+    AnalyticsHelper.logHintUsed(
+      levelIndex: widget.level.index,
+      songIndex: widget.songIndex,
+      hintType: 'points',
+      hintNumber: hintsUsed + 1,
+      cost: cost,
+    );
+
     setState(() {
+      widget.score.value -= cost; // Deduct points
       hintsUsed++;
       shownHints.add('(-$cost) $hint');
     });
+  }
+
+  void _watchAdForHint() {
+    if (hintsUsed >= 3) {
+      _snack('השתמשת בכל הרמזים! 🎯');
+      return;
+    }
+
+    if (!_isRewardedAdLoaded || _rewardedAd == null) {
+      _snack('הפרסומת טוענת... נסי שוב בעוד רגע ⏳');
+      return;
+    }
+
+    print('🎁 Showing rewarded ad for hint...');
+
+    // Log analytics for ad shown
+    AnalyticsHelper.logAdShown(
+      adType: 'rewarded',
+      trigger: 'hint_request',
+    );
+
+    _rewardedAd!.show(
+      onUserEarnedReward: (ad, reward) {
+        print('✅ User earned reward! Giving hint...');
+        final hint = _getHintText();
+
+        // Log analytics for hint use via ad
+        AnalyticsHelper.logHintUsed(
+          levelIndex: widget.level.index,
+          songIndex: widget.songIndex,
+          hintType: 'ad',
+          hintNumber: hintsUsed + 1,
+          cost: null,
+        );
+
+        setState(() {
+          hintsUsed++;
+          shownHints.add('(📺 פרסומת) $hint');
+        });
+      },
+    );
+    _isRewardedAdLoaded = false;
   }
 
   void _checkAnswer() {
@@ -1229,6 +1483,16 @@ class _GamePlayPageState extends State<GamePlayPage> {
     final bonusFirstAttempt = attempts == 1 ? 10 : 0;
     if (attempts == 1) points += 10;
     if (points < 10) points = 10;
+
+    // Log analytics for song solved
+    AnalyticsHelper.logSongSolved(
+      levelIndex: widget.level.index,
+      songIndex: widget.songIndex,
+      points: points,
+      attempts: attempts,
+      hintsUsed: hintsUsed,
+      timeSeconds: elapsed,
+    );
 
     // Build score breakdown
     final hintPenalty = hintsUsed > 0 ? hintCosts.take(hintsUsed).reduce((a, b) => a + b) : 0;
@@ -1269,9 +1533,14 @@ class _GamePlayPageState extends State<GamePlayPage> {
         backgroundColor: const Color(0xFF1A1A1F),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('!כל הכבוד 🎉', textAlign: TextAlign.center),
-        content: Text(
-          '${song.title} - ${song.artist}\n\n$scoreBreakdown\n\nסה״כ: +$points נקודות',
-          textAlign: TextAlign.center,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${song.title} - ${song.artist}\n\n$scoreBreakdown\n\nסה״כ: +$points נקודות',
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
@@ -1302,6 +1571,13 @@ class _GamePlayPageState extends State<GamePlayPage> {
   }
 
   void _skipSong() {
+    // Log analytics for song skip
+    AnalyticsHelper.logSongSkipped(
+      levelIndex: widget.level.index,
+      songIndex: widget.songIndex,
+      attempts: attempts,
+    );
+
     final currentLevel = widget.level;
 
     // חיפוש שיר לא פתור אחרי הנוכחי
@@ -1366,7 +1642,13 @@ class _GamePlayPageState extends State<GamePlayPage> {
         elevation: 0,
         actions: [ScoreBadge(score: widget.score)],
       ),
-      body: CheapBackground(
+      body: GestureDetector(
+        onTap: () {
+          // Close keyboard when tapping outside text field
+          FocusScope.of(context).unfocus();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: CheapBackground(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
           child: Column(
@@ -1418,7 +1700,17 @@ class _GamePlayPageState extends State<GamePlayPage> {
                           strokeWidth: 3,
                         ),
                       ),
-                    ]
+                    ],
+                    // iTunes Attribution
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Music previews by iTunes',
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.white38,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1497,23 +1789,67 @@ class _GamePlayPageState extends State<GamePlayPage> {
                                 padding: const EdgeInsets.symmetric(vertical: 4),
                                 child: Text('💡 $h', textAlign: TextAlign.center),
                               )),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      width: 120,
-                      child: OutlinedButton(
-                        onPressed: hintsUsed >= 3 ? null : _useHint,
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.orangeAccent),
-                          foregroundColor: Colors.orangeAccent,
-                        ),
-                        child: const Icon(Icons.lightbulb, color: Colors.orangeAccent, size: 24),
-                      ),
+                    const SizedBox(height: 10),
+                    // Show current score
+                    ValueListenableBuilder<int>(
+                      valueListenable: widget.score,
+                      builder: (context, score, _) {
+                        final cost = hintsUsed < 3 ? hintCosts[hintsUsed] : 0;
+                        final canAfford = score >= cost && hintsUsed < 3;
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Use Points Button
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: (hintsUsed >= 3 || !canAfford) ? null : _useHint,
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: canAfford ? Colors.orangeAccent : Colors.grey,
+                                    width: 2,
+                                  ),
+                                  foregroundColor: canAfford ? Colors.orangeAccent : Colors.grey,
+                                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                ),
+                                icon: Icon(
+                                  Icons.lightbulb,
+                                  color: canAfford ? Colors.orangeAccent : Colors.grey,
+                                  size: 20,
+                                ),
+                                label: Text(
+                                  hintsUsed >= 3 ? 'אזלו' : '$cost נק\'',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Watch Ad Button
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: hintsUsed >= 3 ? null : _watchAdForHint,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: hintsUsed >= 3 ? Colors.grey : Colors.purple,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                ),
+                                icon: const Icon(Icons.play_circle_filled, size: 20),
+                                label: const Text(
+                                  'צפה בפרסומת',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
             ],
           ),
+        ),
         ),
       ),
     );

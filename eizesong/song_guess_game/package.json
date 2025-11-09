@@ -1,0 +1,21 @@
+{
+  "name": "song-guess-game",
+  "version": "1.0.0",
+  "description": "משחק ניחוש שירים - Game built with Flutter",
+  "scripts": {
+    "build": "flutter build web --release && cp web/_redirects build/web/_redirects",
+    "deploy": "npm run build && netlify deploy --prod --dir=build/web",
+    "dev": "flutter run -d chrome"
+  },
+  "keywords": [
+    "flutter",
+    "game",
+    "music",
+    "quiz"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  }
+}
