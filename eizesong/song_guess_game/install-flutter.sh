@@ -20,9 +20,11 @@ flutter config --enable-web
 # Get dependencies and build
 cd $OLDPWD
 flutter pub get
-flutter build web --release
+flutter build web --release --base-href=/
 
-# Copy redirects
-cp web/_redirects build/web/_redirects
+# Copy redirects if exists
+if [ -f "web/_redirects" ]; then
+  cp web/_redirects build/web/_redirects
+fi
 
 echo "Build complete!"

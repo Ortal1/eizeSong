@@ -1,6 +1,7 @@
 [build]
+  base = "eizesong/song_guess_game"
   publish = "eizesong/song_guess_game/build/web"
-  command = "cd eizesong/song_guess_game && bash install-flutter.sh"
+  command = "bash install-flutter.sh"
 
 [[redirects]]
   from = "/*"
