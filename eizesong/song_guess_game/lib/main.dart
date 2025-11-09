@@ -538,21 +538,39 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
   final TextEditingController _usernameController = TextEditingController();
   bool _isLoading = false;
+  late final AnimationController _controller;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+      lowerBound: 0.92,
+      upperBound: 1.04,
+    )..repeat(reverse: true);
+    _pulse = _controller.drive(Tween<double>(begin: 0.92, end: 1.04));
+  }
 
   @override
   void dispose() {
     _usernameController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _startPlaying() async {
     final username = _usernameController.text.trim();
     if (username.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('נא להזין שם משתמש')),
+        const SnackBar(
+          content: Text('נא להזין שם משתמש'),
+          backgroundColor: Color(0xFF1abc9c),
+        ),
       );
       return;
     }
@@ -560,24 +578,19 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Save username
       await UserDataHelper.saveUsername(username)
           .timeout(const Duration(seconds: 3));
-
-      // Load user data
       final score = await UserDataHelper.getScore()
           .timeout(const Duration(seconds: 2));
       widget.score.value = score;
 
       setState(() => _isLoading = false);
-
       if (!mounted) return;
 
-      // Navigate to splash page
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => SplashPage(score: widget.score),
+          builder: (_) => LevelSelectionPage(score: widget.score),
         ),
       );
     } catch (e) {
@@ -585,14 +598,12 @@ class _LoginPageState extends State<LoginPage> {
         print('Error during login: $e');
       }
       setState(() => _isLoading = false);
-
       if (!mounted) return;
 
-      // Even if save fails, still navigate (for web compatibility)
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => SplashPage(score: widget.score),
+          builder: (_) => LevelSelectionPage(score: widget.score),
         ),
       );
     }
@@ -601,108 +612,183 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0f0f23),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF1a1a2e), Color(0xFF0f0f23)],
+            colors: [
+              Color(0xFF0a2342),  // Deep navy
+              Color(0xFF16213e),  // Dark blue
+              Color(0xFF0f3443),  // Teal dark
+            ],
           ),
         ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.music_note,
-                    size: 100,
-                    color: Color(0xFFe94560),
+                  // Animated music note
+                  ScaleTransition(
+                    scale: _pulse,
+                    child: Container(
+                      padding: const EdgeInsets.all(30),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1abc9c), Color(0xFF16a085)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF1abc9c).withOpacity(0.5),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.music_note_rounded,
+                        size: 80,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 40),
+
+                  // Title
                   const Text(
                     'ניחוש שירים',
                     style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 48,
+                      fontWeight: FontWeight.w900,
                       color: Colors.white,
+                      letterSpacing: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'ברוכה הבאה ואם שבה אז שווה!',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Color(0xFF16213e),
-                    ),
-                  ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 16),
+
+                  // Subtitle
                   Container(
-                    constraints: const BoxConstraints(maxWidth: 400),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1abc9c).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF1abc9c).withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: const Text(
+                      'ברוכה הבאה ואם שבה אז שווה 🎵',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Color(0xFF1abc9c),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 60),
+
+                  // Username input
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 450),
                     child: TextField(
                       controller: _usernameController,
                       textAlign: TextAlign.right,
-                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                      ),
                       decoration: InputDecoration(
-                        hintText: 'הזיני שם משתמש',
-                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                        hintText: 'מה השם שלך? 🎤',
+                        hintStyle: TextStyle(
+                          color: Colors.white.withOpacity(0.4),
+                          fontSize: 18,
+                        ),
                         filled: true,
-                        fillColor: const Color(0xFF16213e),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                        fillColor: const Color(0xFF16213e).withOpacity(0.6),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: const Color(0xFF1abc9c).withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1abc9c),
+                            width: 2,
+                          ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
+                          horizontal: 24,
+                          vertical: 20,
                         ),
                       ),
-                      onSubmitted: (_) => _login(),
+                      onSubmitted: (_) => _startPlaying(),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
+                  const SizedBox(height: 32),
+
+                  // Start button
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 450),
                     child: SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFe94560),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        onPressed: _isLoading ? null : _startPlaying,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1abc9c),
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 8,
+                          shadowColor: const Color(0xFF1abc9c).withOpacity(0.5),
                         ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 28,
+                                width: 28,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                ),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'התחילי לשחק',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Icon(Icons.play_arrow_rounded, size: 32, color: Colors.white),
+                                ],
                               ),
-                            )
-                          : const Text(
-                              'התחילי לשחק',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // Progress save notice
                   Text(
-                    'ההתקדמות שלך תישמר אוטומטית',
+                    'ההתקדמות שלך תישמר אוטומטית ✨',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
-                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ],
@@ -1720,27 +1806,29 @@ class _GamePlayPageState extends State<GamePlayPage> {
 
   String _getHintText() {
     if (hintsUsed == 0) {
-      // First hint: Band/Artist type, Year, or Theme
-      final hints = <String>[];
+      // First hint: Band/Artist type ONLY
       if (song.isBand != null) {
-        hints.add(song.isBand! ? 'זו להקה' : 'זה אמן/ית סולו');
-      }
-      if (song.year != null) {
-        hints.add('השיר יצא בשנת ${song.year}');
-      }
-      if (song.theme != null) {
-        hints.add('השיר מדבר על ${song.theme}');
-      }
-      if (hints.isEmpty) {
+        return song.isBand! ? 'רמז: זו להקה 🎸' : 'רמז: זה אמן/ית סולו 🎤';
+      } else {
         final firstWord = song.title.split(' ').first;
         return 'רמז: המילה הראשונה בשם השיר היא "$firstWord"';
       }
-      return 'רמז: ${hints.join(' • ')}';
     } else if (hintsUsed == 1) {
-      return 'רמז: האמן/ת הוא/היא ${song.artist}';
+      // Second hint: Year OR Theme (prefer year if available)
+      if (song.year != null) {
+        return 'רמז: השיר יצא בשנת ${song.year} 📅';
+      } else if (song.theme != null) {
+        return 'רמז: השיר מדבר על ${song.theme} 💭';
+      } else {
+        return 'רמז: האמן/ת הוא/היא ${song.artist}';
+      }
     } else {
-      final head = song.title.substring(0, song.title.length.clamp(0, 3));
-      return 'רמז: תחילת השם כוללת "$head"';
+      // Third hint: Theme OR Artist name
+      if (song.theme != null) {
+        return 'רמז: השיר מדבר על ${song.theme} 💭';
+      } else {
+        return 'רמז: האמן/ת הוא/היא ${song.artist} 🎵';
+      }
     }
   }
 
