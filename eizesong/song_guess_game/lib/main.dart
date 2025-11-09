@@ -1812,51 +1812,81 @@ class _GamePlayPageState extends State<GamePlayPage> {
                         final cost = hintsUsed < 3 ? hintCosts[hintsUsed] : 0;
                         final canAfford = score >= cost && hintsUsed < 3;
 
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Use Points Button
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: (hintsUsed >= 3 || !canAfford) ? null : _useHint,
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: canAfford ? Colors.orangeAccent : Colors.grey,
-                                    width: 2,
+                        return kIsWeb
+                            ?
+                            // Web version - only points button, centered and wider
+                            Center(
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: (hintsUsed >= 3 || !canAfford) ? null : _useHint,
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(
+                                      color: canAfford ? Colors.orangeAccent : Colors.grey,
+                                      width: 2,
+                                    ),
+                                    foregroundColor: canAfford ? Colors.orangeAccent : Colors.grey,
+                                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                                   ),
-                                  foregroundColor: canAfford ? Colors.orangeAccent : Colors.grey,
-                                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                                ),
-                                icon: Icon(
-                                  Icons.lightbulb,
-                                  color: canAfford ? Colors.orangeAccent : Colors.grey,
-                                  size: 20,
-                                ),
-                                label: Text(
-                                  hintsUsed >= 3 ? 'אזלו' : '$cost נק\'',
-                                  style: const TextStyle(fontSize: 12),
+                                  icon: Icon(
+                                    Icons.lightbulb,
+                                    color: canAfford ? Colors.orangeAccent : Colors.grey,
+                                    size: 20,
+                                  ),
+                                  label: Text(
+                                    hintsUsed >= 3 ? 'אזלו הרמזים' : 'רמז ($cost נקודות)',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            // Watch Ad Button
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: hintsUsed >= 3 ? null : _watchAdForHint,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: hintsUsed >= 3 ? Colors.grey : Colors.purple,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                            )
+                            :
+                            // Mobile version - both buttons
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Use Points Button
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: (hintsUsed >= 3 || !canAfford) ? null : _useHint,
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: canAfford ? Colors.orangeAccent : Colors.grey,
+                                        width: 2,
+                                      ),
+                                      foregroundColor: canAfford ? Colors.orangeAccent : Colors.grey,
+                                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                    ),
+                                    icon: Icon(
+                                      Icons.lightbulb,
+                                      color: canAfford ? Colors.orangeAccent : Colors.grey,
+                                      size: 20,
+                                    ),
+                                    label: Text(
+                                      hintsUsed >= 3 ? 'אזלו' : '$cost נק\'',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ),
                                 ),
-                                icon: const Icon(Icons.play_circle_filled, size: 20),
-                                label: const Text(
-                                  'צפה בפרסומת',
-                                  style: TextStyle(fontSize: 12),
+                                const SizedBox(width: 8),
+                                // Watch Ad Button
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: hintsUsed >= 3 ? null : _watchAdForHint,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: hintsUsed >= 3 ? Colors.grey : Colors.purple,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                    ),
+                                    icon: const Icon(Icons.play_circle_filled, size: 20),
+                                    label: const Text(
+                                      'צפה בפרסומת',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ],
-                        );
+                              ],
+                            );
                       },
                     ),
                   ],
