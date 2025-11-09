@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'ad_helper.dart';
 import 'analytics_helper.dart';
 import 'firebase_options.dart';
+// Import dart:html for web localStorage - conditional import
+import 'dart:html' as html show window;
 
 
 /* =========================
@@ -49,46 +51,138 @@ class AudioFx {
    ========================= */
 class UserDataHelper {
   static const String _keyUsername = 'username';
-  static const String _keyScore = 'totalScore';
-  static const String _keySolvedSongs = 'solvedSongs';
+
+  // Helper to create user-specific key
+  static String _userKey(String username, String key) {
+    return 'user_${username}_$key';
+  }
+
+  // Use localStorage for web with fallback to SharedPreferences
+  static String? _getFromStorage(String key) {
+    if (kIsWeb) {
+      try {
+        return html.window.localStorage[key];
+      } catch (e) {
+        print('⚠️ localStorage not available, will use SharedPreferences: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  static void _setInStorage(String key, String value) {
+    if (kIsWeb) {
+      try {
+        html.window.localStorage[key] = value;
+        print('💾 Saved to localStorage: $key');
+      } catch (e) {
+        print('⚠️ localStorage not available: $e');
+      }
+    }
+  }
 
   static Future<String?> getUsername() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyUsername);
+    try {
+      if (kIsWeb) {
+        final value = _getFromStorage(_keyUsername);
+        if (value != null) return value;
+      }
+      // Fallback to SharedPreferences (works on mobile and some web browsers)
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_keyUsername);
+    } catch (e) {
+      print('❌ Error loading username: $e');
+      return null;
+    }
   }
 
   static Future<void> saveUsername(String username) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyUsername, username);
-  }
-
-  static Future<int> getScore() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyScore) ?? 0;
-  }
-
-  static Future<void> saveScore(int score) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyScore, score);
-  }
-
-  static Future<Map<String, bool>> getSolvedSongs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_keySolvedSongs);
-    if (jsonString == null) return {};
-
     try {
+      print('💾 Saving username: $username');
+      if (kIsWeb) {
+        _setInStorage(_keyUsername, username);
+      }
+      // Always save to SharedPreferences as fallback
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyUsername, username);
+      print('✅ Username saved successfully');
+    } catch (e) {
+      print('❌ Error saving username: $e');
+    }
+  }
+
+  static Future<int> getScore(String username) async {
+    try {
+      if (kIsWeb) {
+        final value = _getFromStorage(_userKey(username, 'totalScore'));
+        if (value != null) {
+          return int.tryParse(value) ?? 0;
+        }
+      }
+      // Fallback to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt(_userKey(username, 'totalScore')) ?? 0;
+    } catch (e) {
+      print('❌ Error loading score: $e');
+      return 0;
+    }
+  }
+
+  static Future<void> saveScore(String username, int score) async {
+    try {
+      print('💾 Saving score for $username: $score');
+      if (kIsWeb) {
+        _setInStorage(_userKey(username, 'totalScore'), score.toString());
+      }
+      // Always save to SharedPreferences as fallback
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_userKey(username, 'totalScore'), score);
+      print('✅ Score saved successfully');
+    } catch (e) {
+      print('❌ Error saving score: $e');
+    }
+  }
+
+  static Future<Map<String, bool>> getSolvedSongs(String username) async {
+    try {
+      String? jsonString;
+
+      if (kIsWeb) {
+        jsonString = _getFromStorage(_userKey(username, 'solvedSongs'));
+      }
+
+      // Fallback to SharedPreferences if localStorage failed or not available
+      if (jsonString == null) {
+        final prefs = await SharedPreferences.getInstance();
+        jsonString = prefs.getString(_userKey(username, 'solvedSongs'));
+      }
+
+      if (jsonString == null || jsonString.isEmpty) return {};
+
       final Map<String, dynamic> decoded = json.decode(jsonString);
       return decoded.map((key, value) => MapEntry(key, value as bool));
-    } catch (_) {
+    } catch (e) {
+      print('❌ Error loading solved songs: $e');
       return {};
     }
   }
 
-  static Future<void> saveSolvedSongs(Map<String, bool> solvedSongs) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = json.encode(solvedSongs);
-    await prefs.setString(_keySolvedSongs, jsonString);
+  static Future<void> saveSolvedSongs(String username, Map<String, bool> solvedSongs) async {
+    try {
+      final jsonString = json.encode(solvedSongs);
+      print('💾 Saving ${solvedSongs.length} solved songs for $username');
+
+      if (kIsWeb) {
+        _setInStorage(_userKey(username, 'solvedSongs'), jsonString);
+      }
+
+      // Always save to SharedPreferences as fallback
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_userKey(username, 'solvedSongs'), jsonString);
+      print('✅ Solved songs saved successfully');
+    } catch (e) {
+      print('❌ Error saving solved songs: $e');
+    }
   }
 
   static String getSongKey(int levelIndex, int songIndex) {
@@ -133,10 +227,10 @@ class _SongGuessAppState extends State<SongGuessApp> {
 
       if (username != null && username.isNotEmpty) {
         // User exists, load their data
-        final score = await UserDataHelper.getScore()
+        final score = await UserDataHelper.getScore(username)
             .timeout(const Duration(seconds: 1));
         _score.value = score;
-        return SplashPage(score: _score);
+        return SplashPage(score: _score, username: username);
       } else {
         // No user, show login
         return LoginPage(score: _score);
@@ -578,11 +672,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     setState(() => _isLoading = true);
 
     try {
-      await UserDataHelper.saveUsername(username)
-          .timeout(const Duration(seconds: 3));
-      final score = await UserDataHelper.getScore()
+      print('👤 Logging in as: $username');
+      await UserDataHelper.saveUsername(username);
+      final score = await UserDataHelper.getScore(username)
           .timeout(const Duration(seconds: 2));
       widget.score.value = score;
+
+      print('💯 Loaded score for $username: $score');
 
       setState(() => _isLoading = false);
       if (!mounted) return;
@@ -590,12 +686,12 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => LevelSelectionPage(score: widget.score),
+          builder: (_) => LevelSelectionPage(score: widget.score, username: username),
         ),
       );
     } catch (e) {
       if (kDebugMode) {
-        print('Error during login: $e');
+        print('❌ Error during login: $e');
       }
       setState(() => _isLoading = false);
       if (!mounted) return;
@@ -603,7 +699,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => LevelSelectionPage(score: widget.score),
+          builder: (_) => LevelSelectionPage(score: widget.score, username: username),
         ),
       );
     }
@@ -612,18 +708,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0a2342),  // Deep navy
-              Color(0xFF16213e),  // Dark blue
-              Color(0xFF0f3443),  // Teal dark
-            ],
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      body: CheapBackground(
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -705,7 +791,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         fontWeight: FontWeight.w500,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'מה השם שלך? 🎤',
+                        hintText: 'מה השם שלך?',
                         hintStyle: TextStyle(
                           color: Colors.white.withOpacity(0.4),
                           fontSize: 18,
@@ -806,7 +892,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
    ========================= */
 class SplashPage extends StatefulWidget {
   final ValueNotifier<int> score;
-  const SplashPage({super.key, required this.score});
+  final String username;
+  const SplashPage({super.key, required this.score, required this.username});
 
   @override
   State<SplashPage> createState() => _SplashPageState();
@@ -839,7 +926,7 @@ class _SplashPageState extends State<SplashPage>
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => LevelSelectionPage(score: widget.score),
+        builder: (_) => LevelSelectionPage(score: widget.score, username: widget.username),
       ),
     );
   }
@@ -847,15 +934,15 @@ class _SplashPageState extends State<SplashPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1a1a2e),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         title: const Text('ניחוש שירים', textAlign: TextAlign.center),
         actions: [ScoreBadge(score: widget.score)],
       ),
-      body: Container(
-        color: const Color(0xFF1a1a2e), // Simple solid color instead of gradient
+      body: CheapBackground(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -884,8 +971,8 @@ class _SplashPageState extends State<SplashPage>
                   icon: const Icon(Icons.play_arrow_rounded),
                   label: const Text('התחילי', textAlign: TextAlign.center),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00D1FF),
-                    foregroundColor: Colors.black,
+                    backgroundColor: const Color(0xFF1abc9c),
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   ),
                 ),
@@ -903,7 +990,8 @@ class _SplashPageState extends State<SplashPage>
    ========================= */
 class LevelSelectionPage extends StatefulWidget {
   final ValueNotifier<int> score;
-  const LevelSelectionPage({super.key, required this.score});
+  final String username;
+  const LevelSelectionPage({super.key, required this.score, required this.username});
 
   @override
   State<LevelSelectionPage> createState() => _LevelSelectionPageState();
@@ -1111,27 +1199,32 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
 
   Future<void> _loadSavedProgress() async {
     try {
-      final solvedSongs = await UserDataHelper.getSolvedSongs()
+      print('🔍 Loading progress for username: ${widget.username}');
+      final solvedSongs = await UserDataHelper.getSolvedSongs(widget.username)
           .timeout(const Duration(seconds: 2));
 
+      print('📊 Found ${solvedSongs.length} solved songs: $solvedSongs');
+
+      int totalMarked = 0;
       for (int levelIndex = 0; levelIndex < levels.length; levelIndex++) {
         final level = levels[levelIndex];
         for (int songIndex = 0; songIndex < level.songs.length; songIndex++) {
           final songKey = UserDataHelper.getSongKey(level.index, songIndex);
           if (solvedSongs[songKey] == true) {
             level.songs[songIndex].isSolved = true;
+            totalMarked++;
           }
         }
       }
+
+      print('✅ Marked $totalMarked songs as solved');
 
       if (mounted) {
         setState(() {});
       }
     } catch (e) {
       // If loading fails, just continue without saved progress
-      if (kDebugMode) {
-        print('Error loading saved progress: $e');
-      }
+      print('❌ Error loading saved progress: $e');
     }
   }
 
@@ -1243,6 +1336,7 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
         builder: (_) => SongSelectionPage(
           score: widget.score,
           level: level,
+          username: widget.username,
           onScoreUpdate: (delta) => widget.score.value += delta,
           onLevelProgress: (updated) {
             final needed = (updated.songs.length * 0.7).ceil();
@@ -1355,6 +1449,7 @@ class SongSelectionPage extends StatefulWidget {
   final Level level;
   final ValueChanged<int> onScoreUpdate;
   final ValueChanged<Level> onLevelProgress;
+  final String username;
 
   const SongSelectionPage({
     super.key,
@@ -1362,6 +1457,7 @@ class SongSelectionPage extends StatefulWidget {
     required this.level,
     required this.onScoreUpdate,
     required this.onLevelProgress,
+    required this.username,
   });
 
   @override
@@ -1463,11 +1559,13 @@ class _SongSelectionPageState extends State<SongSelectionPage> {
             widget.onLevelProgress(level);
 
             // Save progress to local storage
-            final solvedSongs = await UserDataHelper.getSolvedSongs();
+            print('📝 Starting to save progress for ${widget.username}');
+            final solvedSongs = await UserDataHelper.getSolvedSongs(widget.username);
             final songKey = UserDataHelper.getSongKey(level.index, index);
             solvedSongs[songKey] = true;
-            await UserDataHelper.saveSolvedSongs(solvedSongs);
-            await UserDataHelper.saveScore(widget.score.value);
+            await UserDataHelper.saveSolvedSongs(widget.username, solvedSongs);
+            await UserDataHelper.saveScore(widget.username, widget.score.value);
+            print('✅ Progress saved for ${widget.username}: $songKey');
           },
         ),
       ),
@@ -2143,14 +2241,14 @@ class _GamePlayPageState extends State<GamePlayPage> {
                     ],
                     // iTunes Attribution
                     const SizedBox(height: 8),
-                    const Text(
-                      'Music previews by iTunes',
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: Colors.white38,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
+                    // const Text(
+                    //   'Music previews by iTunes',
+                    //   style: TextStyle(
+                    //     fontSize: 9,
+                    //     color: Colors.white38,
+                    //     fontStyle: FontStyle.italic,
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
