@@ -1,13 +1,6 @@
 [build]
   publish = "build/web"
-  command = "flutter build web --release"
-
-[build.environment]
-  # Specify Flutter channel and version if needed
-  # FLUTTER_VERSION = "stable"
-
-[[plugins]]
-  package = "netlify-plugin-flutter"
+  command = "bash install-flutter.sh"
 
 [[redirects]]
   from = "/*"
