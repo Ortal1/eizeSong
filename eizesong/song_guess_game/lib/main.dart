@@ -45,7 +45,10 @@ class AudioFx {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await MobileAds.instance.initialize();
+  // Only initialize Mobile Ads on mobile platforms (not web)
+  if (!kIsWeb) {
+    await MobileAds.instance.initialize();
+  }
   await AnalyticsHelper.logAppStart();
   runApp(const SongGuessApp());
 }
@@ -724,8 +727,10 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
     super.initState();
     // Preload the first unsolved song from the first unlocked level
     _preloadFirstSong();
-    // Load interstitial ad
-    _loadInterstitialAd();
+    // Load interstitial ad (only on mobile)
+    if (!kIsWeb) {
+      _loadInterstitialAd();
+    }
   }
 
   @override
@@ -735,6 +740,7 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
   }
 
   void _loadInterstitialAd() {
+    if (kIsWeb) return; // Skip on web
     print('🔄 Loading interstitial ad...');
     InterstitialAd.load(
       adUnitId: AdHelper.interstitialAdUnitId,
@@ -767,6 +773,7 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
   }
 
   void _showInterstitialAd() {
+    if (kIsWeb) return; // Skip on web
     print('🎬 Attempting to show ad... isLoaded: $_isAdLoaded');
     if (_isAdLoaded && _interstitialAd != null) {
       print('✅ Showing ad now!');
@@ -1243,8 +1250,10 @@ class _GamePlayPageState extends State<GamePlayPage> {
     });
     // Preload song preview in background immediately
     _ensurePreview();
-    // Load rewarded ad
-    _loadRewardedAd();
+    // Load rewarded ad (only on mobile)
+    if (!kIsWeb) {
+      _loadRewardedAd();
+    }
   }
 
   @override
@@ -1256,6 +1265,7 @@ class _GamePlayPageState extends State<GamePlayPage> {
   }
 
   void _loadRewardedAd() {
+    if (kIsWeb) return; // Skip on web
     print('🎁 Loading rewarded ad...');
     RewardedAd.load(
       adUnitId: AdHelper.rewardedAdUnitId,
@@ -1426,6 +1436,11 @@ class _GamePlayPageState extends State<GamePlayPage> {
   }
 
   void _watchAdForHint() {
+    if (kIsWeb) {
+      _snack('פרסומות זמינות רק באפליקציה 📱');
+      return;
+    }
+
     if (hintsUsed >= 3) {
       _snack('השתמשת בכל הרמזים! 🎯');
       return;
