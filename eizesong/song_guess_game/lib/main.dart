@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'ad_helper.dart';
 import 'analytics_helper.dart';
 import 'firebase_options.dart';
@@ -42,6 +43,58 @@ class AudioFx {
     } catch (_) {}
   }
 }
+
+/* =========================
+   USER DATA STORAGE
+   ========================= */
+class UserDataHelper {
+  static const String _keyUsername = 'username';
+  static const String _keyScore = 'totalScore';
+  static const String _keySolvedSongs = 'solvedSongs';
+
+  static Future<String?> getUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUsername);
+  }
+
+  static Future<void> saveUsername(String username) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUsername, username);
+  }
+
+  static Future<int> getScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyScore) ?? 0;
+  }
+
+  static Future<void> saveScore(int score) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyScore, score);
+  }
+
+  static Future<Map<String, bool>> getSolvedSongs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = prefs.getString(_keySolvedSongs);
+    if (jsonString == null) return {};
+
+    try {
+      final Map<String, dynamic> decoded = json.decode(jsonString);
+      return decoded.map((key, value) => MapEntry(key, value as bool));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> saveSolvedSongs(Map<String, bool> solvedSongs) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = json.encode(solvedSongs);
+    await prefs.setString(_keySolvedSongs, jsonString);
+  }
+
+  static String getSongKey(int levelIndex, int songIndex) {
+    return 'L${levelIndex}_S$songIndex';
+  }
+}
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -73,6 +126,20 @@ class _SongGuessAppState extends State<SongGuessApp> {
     super.dispose();
   }
 
+  Future<Widget> _getHomePage() async {
+    final username = await UserDataHelper.getUsername();
+
+    if (username != null && username.isNotEmpty) {
+      // User exists, load their data
+      final score = await UserDataHelper.getScore();
+      _score.value = score;
+      return SplashPage(score: _score);
+    } else {
+      // No user, show login
+      return LoginPage(score: _score);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -85,7 +152,22 @@ class _SongGuessAppState extends State<SongGuessApp> {
           displayColor: Colors.white,
         ),
       ),
-      home: SplashPage(score: _score),
+      home: FutureBuilder<Widget>(
+        future: _getHomePage(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              backgroundColor: Color(0xFF0f0f23),
+              body: Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFFe94560),
+                ),
+              ),
+            );
+          }
+          return snapshot.data ?? LoginPage(score: _score);
+        },
+      ),
     );
   }
 }
@@ -436,6 +518,175 @@ Future<String?> fetchItunesPreview(String title, String artist) async {
 }
 
 /* =========================
+   LOGIN PAGE (מסך התחברות)
+   ========================= */
+class LoginPage extends StatefulWidget {
+  final ValueNotifier<int> score;
+  const LoginPage({super.key, required this.score});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _usernameController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    final username = _usernameController.text.trim();
+    if (username.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('נא להזין שם משתמש')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    // Save username
+    await UserDataHelper.saveUsername(username);
+
+    // Load user data
+    final score = await UserDataHelper.getScore();
+    widget.score.value = score;
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    // Navigate to splash page
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SplashPage(score: widget.score),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0f0f23),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1a1a2e), Color(0xFF0f0f23)],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.music_note,
+                    size: 100,
+                    color: Color(0xFFe94560),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'ניחוש שירים',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'ברוכים הבאים!',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Color(0xFF16213e),
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: TextField(
+                      controller: _usernameController,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                      decoration: InputDecoration(
+                        hintText: 'הזיני שם משתמש',
+                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                        filled: true,
+                        fillColor: const Color(0xFF16213e),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                      onSubmitted: (_) => _login(),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                      onPressed: _isLoading ? null : _login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFe94560),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'התחילי לשחק',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'ההתקדמות שלך תישמר אוטומטית',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.6),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/* =========================
    SPLASH PAGE (מסך פתיחה) – הכל ממורכז
    ========================= */
 class SplashPage extends StatefulWidget {
@@ -733,11 +984,31 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
   @override
   void initState() {
     super.initState();
+    // Load saved progress
+    _loadSavedProgress();
     // Preload the first unsolved song from the first unlocked level
     _preloadFirstSong();
     // Load interstitial ad (only on mobile)
     if (!kIsWeb) {
       _loadInterstitialAd();
+    }
+  }
+
+  Future<void> _loadSavedProgress() async {
+    final solvedSongs = await UserDataHelper.getSolvedSongs();
+
+    for (int levelIndex = 0; levelIndex < levels.length; levelIndex++) {
+      final level = levels[levelIndex];
+      for (int songIndex = 0; songIndex < level.songs.length; songIndex++) {
+        final songKey = UserDataHelper.getSongKey(level.index, songIndex);
+        if (solvedSongs[songKey] == true) {
+          level.songs[songIndex].isSolved = true;
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -1063,10 +1334,17 @@ class _SongSelectionPageState extends State<SongSelectionPage> {
           score: widget.score,
           level: level,
           songIndex: index,
-          onSolved: (points) {
+          onSolved: (points) async {
             widget.onScoreUpdate(points);
             level.songs[index].isSolved = true;
             widget.onLevelProgress(level);
+
+            // Save progress to local storage
+            final solvedSongs = await UserDataHelper.getSolvedSongs();
+            final songKey = UserDataHelper.getSongKey(level.index, index);
+            solvedSongs[songKey] = true;
+            await UserDataHelper.saveSolvedSongs(solvedSongs);
+            await UserDataHelper.saveScore(widget.score.value);
           },
         ),
       ),
